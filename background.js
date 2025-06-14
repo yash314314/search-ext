@@ -1,129 +1,166 @@
+// background.js - Focus-Friendly Input Extension
+// Service Worker for Manifest v3
+
+// Global state
 let habitModeActive = true;
 let advancedModeActive = false;
+let llmApiKey = '';
 
-// Initialize mode states
-chrome.storage.sync.get(['habitModeActive', 'advancedModeActive'], (result) => {
-    habitModeActive = result.habitModeActive !== false; // Default true
-    advancedModeActive = result.advancedModeActive || false;
-});
-
-// Handle commands
-chrome.commands.onCommand.addListener((command) => {
-    switch (command) {
-        case 'toggle_habit_mode':
-            toggleHabitMode();
-            break;
-        case 'toggle_advanced_mode':
-            toggleAdvancedMode();
-            break;
-    }
-});
-
-function toggleHabitMode() {
-    habitModeActive = !habitModeActive;
-    chrome.storage.sync.set({ habitModeActive });
-    
-    // Disable advanced mode if enabling habit mode
-    if (habitModeActive && advancedModeActive) {
-        advancedModeActive = false;
-        chrome.storage.sync.set({ advancedModeActive });
-    }
-    
-    sendModeUpdates();
+// Initialize extension state
+async function initialize() {
+  const data = await chrome.storage.sync.get([
+    'habitModeActive', 
+    'advancedModeActive',
+    'llmApiKey'
+  ]);
+  
+  habitModeActive = data.habitModeActive !== false;
+  advancedModeActive = data.advancedModeActive || false;
+  llmApiKey = data.llmApiKey || '';
 }
 
-function toggleAdvancedMode() {
-    advancedModeActive = !advancedModeActive;
-    chrome.storage.sync.set({ advancedModeActive });
+// Check if we can access a tab's URL
+function isAccessibleUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const allowedProtocols = ['http:', 'https:'];
+    return allowedProtocols.includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
+// Inject necessary scripts
+async function injectScripts(tabId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['content/habit-mode.js']
+    });
     
-    // Disable habit mode if enabling advanced mode
-    if (advancedModeActive && habitModeActive) {
-        habitModeActive = false;
-        chrome.storage.sync.set({ habitModeActive });
-    }
-    
-    sendModeUpdates();
-    
-    // Inject advanced mode script if needed
     if (advancedModeActive) {
-        injectAdvancedMode();
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content/advanced-mode.js']
+      });
     }
+  } catch (error) {
+    console.debug('Script injection skipped:', error.message);
+  }
 }
 
-function sendModeUpdates() {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs.length > 0) {
-            // First inject content scripts if they don't exist
-            chrome.scripting.executeScript({
-                target: { tabId: tabs[0].id },
-                files: ['content/habit-mode.js']
-            }).then(() => {
-                // Then send messages
-                chrome.tabs.sendMessage(tabs[0].id, {
-                    action: "toggleHabitMode",
-                    enabled: habitModeActive
-                }).catch(err => console.log("Habit mode message not received (may be first load)"));
-
-                chrome.tabs.sendMessage(tabs[0].id, {
-                    action: "toggleAdvancedMode",
-                    enabled: advancedModeActive
-                }).catch(err => console.log("Advanced mode message not received (may be first load)"));
-            });
-        }
+// Send current mode states to content scripts
+async function sendModeUpdates(tabId) {
+  try {
+    await chrome.tabs.sendMessage(tabId, {
+      action: "toggleHabitMode",
+      enabled: habitModeActive
     });
-}
-
-function injectAdvancedMode() {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs.length > 0) {
-            chrome.scripting.executeScript({
-                target: { tabId: tabs[0].id },
-                files: ['content/advanced-mode.js']
-            }).catch(err => console.error("Advanced mode injection failed:", err));
-        }
-    });
-}
-
-// Handle API key storage
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "saveApiKey") {
-        chrome.storage.sync.set({ llmApiKey: request.key }, () => {
-            sendResponse({ success: true });
-            
-            // Notify content script about the new key
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (tabs.length > 0) {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        action: "setApiKey",
-                        key: request.key
-                    }).catch(err => console.log("API key update not received"));
-                }
-            });
-        });
-        return true;
-    }
     
-    if (request.action === "getApiKey") {
-        chrome.storage.sync.get(['llmApiKey'], (result) => {
-            sendResponse({ key: result.llmApiKey });
-        });
-        return true;
+    await chrome.tabs.sendMessage(tabId, {
+      action: "toggleAdvancedMode",
+      enabled: advancedModeActive
+    });
+    
+    if (llmApiKey) {
+      await chrome.tabs.sendMessage(tabId, {
+        action: "setApiKey",
+        key: llmApiKey
+      });
     }
+  } catch (error) {
+    console.debug('Message passing failed:', error.message);
+  }
+}
 
-    // Add this to handle connection checks
-    if (request.action === "ping") {
-        sendResponse({ status: "alive" });
-        return true;
-    }
+// Handle mode toggling
+async function toggleHabitMode() {
+  habitModeActive = !habitModeActive;
+  await chrome.storage.sync.set({ habitModeActive });
+  
+  if (habitModeActive && advancedModeActive) {
+    advancedModeActive = false;
+    await chrome.storage.sync.set({ advancedModeActive });
+  }
+  
+  await updateActiveTab();
+}
+
+async function toggleAdvancedMode() {
+  advancedModeActive = !advancedModeActive;
+  await chrome.storage.sync.set({ advancedModeActive });
+  
+  if (advancedModeActive && habitModeActive) {
+    habitModeActive = false;
+    await chrome.storage.sync.set({ habitModeActive });
+  }
+  
+  await updateActiveTab();
+}
+
+// Update the currently active tab
+async function updateActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id || !isAccessibleUrl(tab.url)) return;
+  
+  await injectScripts(tab.id);
+  await sendModeUpdates(tab.id);
+}
+
+// Message handler
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  switch (request.action) {
+    case "saveApiKey":
+      handleSaveApiKey(request.key, sendResponse);
+      return true;
+      
+    case "getApiKey":
+      sendResponse({ key: llmApiKey });
+      return true;
+      
+    case "ping":
+      sendResponse({ status: "active" });
+      return true;
+  }
 });
 
-// Track tab changes to maintain mode state
-chrome.tabs.onActivated.addListener((activeInfo) => {
-    sendModeUpdates();
+async function handleSaveApiKey(key, sendResponse) {
+  llmApiKey = key;
+  await chrome.storage.sync.set({ llmApiKey });
+  
+  try {
+    await updateActiveTab();
+    sendResponse({ success: true });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// Command handler
+chrome.commands.onCommand.addListener(async (command) => {
+  switch (command) {
+    case 'toggle_habit_mode':
+      await toggleHabitMode();
+      break;
+    case 'toggle_advanced_mode':
+      await toggleAdvancedMode();
+      break;
+  }
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete') {
-        sendModeUpdates();
-    }
+// Tab event handlers
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  await updateActiveTab();
+});
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    await updateActiveTab();
+  }
+});
+
+// Initialize
+initialize().then(() => {
+  console.log('Focus-Friendly Input initialized');
+  updateActiveTab();
 });

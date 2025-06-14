@@ -14,7 +14,9 @@
     "storage",
     "scripting"
   ],
-
+"host_permissions": [
+    "<all_urls>"
+  ],
   "action": {
     "default_icon": "icons/icon-32.png",
     "default_title": "Focus-Friendly Input",
