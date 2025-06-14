@@ -1,12 +1,6 @@
-// background.js - Focus-Friendly Input Extension
-// Service Worker for Manifest v3
-
-// Global state
 let habitModeActive = true;
 let advancedModeActive = false;
 let llmApiKey = '';
-
-// Initialize extension state
 async function initialize() {
   const data = await chrome.storage.sync.get([
     'habitModeActive', 
@@ -19,7 +13,6 @@ async function initialize() {
   llmApiKey = data.llmApiKey || '';
 }
 
-// Check if we can access a tab's URL
 function isAccessibleUrl(url) {
   try {
     const parsed = new URL(url);
@@ -30,7 +23,6 @@ function isAccessibleUrl(url) {
   }
 }
 
-// Inject necessary scripts
 async function injectScripts(tabId) {
   try {
     await chrome.scripting.executeScript({
@@ -159,7 +151,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   }
 });
 
-// Initialize
+
 initialize().then(() => {
   console.log('Focus-Friendly Input initialized');
   updateActiveTab();
