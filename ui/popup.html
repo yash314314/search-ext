@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Focus-Friendly Input</title>
+    <link rel="stylesheet" href="popup.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="container">
+        <h1>Focus-Friendly Input</h1>
+        
+        <div class="mode-switcher">
+            <button id="habit-mode-btn" class="active">Habit Mode</button>
+            <button id="advanced-mode-btn">Advanced Mode</button>
+        </div>
+        
+        <div class="mode-panels">
+            <!-- Habit Mode Settings -->
+            <div id="habit-mode-settings" class="mode-panel">
+                <div class="setting">
+                    <label class="switch">
+                        <input type="checkbox" id="habit-mode-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span>Enable Habit Mode</span>
+                </div>
+                
+                <div class="setting">
+                    <label for="habit-position">Input Position:</label>
+                    <select id="habit-position">
+                        <option value="top">Top of Screen</option>
+                        <option value="middle">Middle of Screen</option>
+                        <option value="custom">Custom Position</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Advanced Mode Settings -->
+            <div id="advanced-mode-settings" class="mode-panel hidden">
+                <div class="setting">
+                    <label class="switch">
+                        <input type="checkbox" id="advanced-mode-toggle">
+                        <span class="slider"></span>
+                    </label>
+                    <span>Enable Advanced Mode</span>
+                </div>
+                
+                <div class="setting">
+                    <label for="api-key">Gemini API Key:</label>
+                    <input type="password" id="api-key" placeholder="Enter your API key">
+                    <button id="save-api-key">Save Key</button>
+                </div>
+                
+                <div class="setting">
+                    <label for="optimization-level">Optimization Level:</label>
+                    <select id="optimization-level">
+                        <option value="basic">Basic</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="aggressive">Aggressive</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+                
+                <div id="custom-options" class="hidden">
+                    <div class="setting">
+                        <label>
+                            <input type="checkbox" id="opt-reposition" checked>
+                            Reposition Inputs
+                        </label>
+                    </div>
+                    <div class="setting">
+                        <label>
+                            <input type="checkbox" id="opt-group" checked>
+                            Group Related Fields
+                        </label>
+                    </div>
+                    <div class="setting">
+                        <label>
+                            <input type="checkbox" id="opt-summarize">
+                            Summarize Content
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="shortcuts">
+            <h3>Keyboard Shortcuts</h3>
+            <p>Toggle Habit Mode: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd></p>
+            <p>Toggle Advanced Mode: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd></p>
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
