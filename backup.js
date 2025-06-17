@@ -60,7 +60,7 @@
       observer.disconnect();
       observer = null;
     }
-
+   chrome.runtime.sendMessage({ action: "toggleHabitMode", enabled : true });
     // Remove all optimizations
     document.querySelectorAll(".ffi-optimized").forEach((el) => {
       el.classList.remove("ffi-optimized");
