@@ -5,7 +5,7 @@
   let advancedModeEnabled = false;
   let llmApiKey = "";
   let observer = null;
-  const LLM_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+ // const LLM_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/chat-bison-001:generateMessage";
   
   console.log("Advanced mode script loaded/content injected");
   initAdvancedMode();
@@ -431,18 +431,21 @@
     };
   }
 
-  async function getAIOptimizations(pageData) {
-    if (!llmApiKey) {
-      return getFallbackOptimizations();
-    }
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-    const prompt = `Analyze this web page structure and suggest UX improvements for input fields. Focus on:
+async function getAIOptimizations(pageData) {
+  if (!llmApiKey) {
+    console.warn("No API key provided. Using fallback optimizations.");
+    return getFallbackOptimizations();
+  }
+
+  const prompt = `Analyze this web page structure and suggest UX improvements for input fields. Focus on:
 1. Repositioning inputs that require excessive scrolling
 2. Grouping related form fields
 3. Improving visibility and accessibility
 4. Preserving the page's original design as much as possible
 
-Return response in this exact JSON format:
+Return ONLY the JSON output in this exact format (no additional text or markdown):
 {
     "input_repositioning": [{
         "selector": "CSS selector",
@@ -465,29 +468,49 @@ Return response in this exact JSON format:
 Page Data:
 ${JSON.stringify(pageData, null, 2)}`;
 
-    const response = await fetch(LLM_API_ENDPOINT, {
+  try {
+    const response = await fetch(GROQ_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${llmApiKey}`,
+        "Authorization": `Bearer ${llmApiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-4-turbo",
+        model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-        max_tokens: 2000,
-      }),
+        temperature: 0.3,
+        response_format: { type: "json_object" } // Request JSON response
+      })
     });
 
     if (!response.ok) {
-      console.log("API response error:", response.status, response.statusText);
+      const errorText = await response.text();
+      console.error("API error:", response.status, errorText);
       throw new Error(`API error: ${response.status}`);
     }
 
     const data = await response.json();
-    return JSON.parse(data.choices[0].message.content);
+    let reply = data.choices?.[0]?.message?.content;
+
+    // Extract JSON from markdown code block if present
+    const jsonMatch = reply.match(/```json\n([\s\S]*?)\n```/);
+    if (jsonMatch && jsonMatch[1]) {
+      reply = jsonMatch[1];
+    }
+
+    try {
+      const optimizations = JSON.parse(reply);
+      console.log("Successfully parsed optimizations:", optimizations);
+      return optimizations;
+    } catch (e) {
+      console.warn("Failed to parse JSON response. Content was:", reply);
+      return getFallbackOptimizations();
+    }
+  } catch (error) {
+    console.error("Error in getAIOptimizations:", error);
+    return getFallbackOptimizations();
   }
+}
 
   function getFallbackOptimizations() {
     const inputs = Array.from(document.querySelectorAll("input, textarea"))
