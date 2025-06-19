@@ -6,7 +6,6 @@
   let llmApiKey = "";
   let observer = null;
  // const LLM_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/chat-bison-001:generateMessage";
-  
   console.log("Advanced mode script loaded/content injected");
   initAdvancedMode();
 
@@ -254,88 +253,155 @@
   }
 
   function createInputGroup(form, inputs) {
-    // Create container for grouped inputs
-    const container = document.createElement("div");
-    container.className = "ffi-container";
-    container.style.position = "fixed";
-    container.style.top = "50%";
-    container.style.left = "50%";
-    container.style.transform = "translate(-50%, -50%)";
-    container.style.zIndex = "9999";
-    container.style.backgroundColor = "white";
-    container.style.padding = "20px";
-    container.style.borderRadius = "8px";
-    container.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.15)";
-    container.style.maxHeight = "80vh";
-    container.style.overflowY = "auto";
-    container.style.width = "min(90vw, 600px)";
+  // Create container for grouped inputs
+  const container = document.createElement("div");
+  container.className = "ffi-container";
+  container.style.position = "fixed";
+  container.style.top = "50%";
+  container.style.left = "50%";
+  container.style.transform = "translate(-50%, -50%)";
+  container.style.zIndex = "9999";
+  container.style.backgroundColor = "white";
+  container.style.padding = "20px";
+  container.style.borderRadius = "8px";
+  container.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.15)";
+  container.style.maxHeight = "80vh";
+  container.style.overflowY = "auto";
+  container.style.width = "min(90vw, 600px)";
 
-    // Add title
-    const title = document.createElement("h3");
-    title.textContent = form.getAttribute("name") || "Form";
-    title.style.marginTop = "0";
-    title.style.marginBottom = "15px";
-    container.appendChild(title);
+  // Add title - try to get form name or heading
+  let formTitle = form.getAttribute("name") || "";
+  if (!formTitle) {
+    const heading = form.querySelector("h1, h2, h3, legend");
+    if (heading) formTitle = heading.textContent.trim();
+  }
+  
+  const title = document.createElement("h3");
+  title.textContent = formTitle || "Form";
+  title.style.marginTop = "0";
+  title.style.marginBottom = "15px";
+  container.appendChild(title);
 
-    // Clone inputs into container
-    inputs.forEach((input) => {
-      // Skip hidden inputs
-      if (input.type === "hidden") return;
+  // Clone inputs into container with better labels
+  inputs.forEach((input) => {
+    // Skip hidden and submit inputs
+    if (input.type === "hidden" || input.type === "submit") return;
 
-      const wrapper = document.createElement("div");
-      wrapper.style.marginBottom = "15px";
+    const wrapper = document.createElement("div");
+    wrapper.style.marginBottom = "15px";
 
-      const label = document.createElement("label");
-      label.textContent =
-        input.getAttribute("placeholder") ||
-        input.getAttribute("aria-label") ||
-        input.previousElementSibling?.textContent ||
-        `Field ${input.type}`;
-      label.style.display = "block";
-      label.style.marginBottom = "5px";
-      label.style.fontWeight = "500";
+    // Find the best label text
+    let labelText = "";
+    
+    // 1. Check for explicit label element
+    if (input.id) {
+      const label = document.querySelector(`label[for="${input.id}"]`);
+      if (label) labelText = label.textContent.trim();
+    }
+    
+    // 2. Check previous sibling if it's a label
+    if (!labelText && input.previousElementSibling?.tagName === "LABEL") {
+      labelText = input.previousElementSibling.textContent.trim();
+    }
+    
+    // 3. Check aria-label
+    if (!labelText) {
+      labelText = input.getAttribute("aria-label") || "";
+    }
+    
+    // 4. Check placeholder
+    if (!labelText) {
+      labelText = input.getAttribute("placeholder") || "";
+    }
+    
+    // 5. Fallback to input type
+    if (!labelText) {
+      labelText = input.type.charAt(0).toUpperCase() + input.type.slice(1);
+    }
 
-      const clonedInput = input.cloneNode(true);
-      clonedInput.style.width = "100%";
-      clonedInput.style.padding = "8px";
-      clonedInput.style.border = "1px solid #ddd";
-      clonedInput.style.borderRadius = "4px";
+    // Create label element
+    const label = document.createElement("label");
+    label.textContent = labelText;
+    label.style.display = "block";
+    label.style.marginBottom = "5px";
+    label.style.fontWeight = "500";
+    label.htmlFor = `ffi-${input.id || input.name || Date.now()}`;
 
-      // Sync changes back to original input
-      clonedInput.addEventListener("input", () => {
-        input.value = clonedInput.value;
-        const event = new Event("input", { bubbles: true });
-        input.dispatchEvent(event);
-      });
+    // Clone input with better styling
+    const clonedInput = input.cloneNode(true);
+    clonedInput.id = label.htmlFor;
+    clonedInput.style.width = "100%";
+    clonedInput.style.padding = "8px";
+    clonedInput.style.border = "1px solid #ddd";
+    clonedInput.style.borderRadius = "4px";
+    clonedInput.style.boxSizing = "border-box";
 
-      wrapper.appendChild(label);
-      wrapper.appendChild(clonedInput);
-      container.appendChild(wrapper);
-
-      // Hide original input
-      input.style.opacity = "0";
-      input.style.position = "absolute";
-      input.style.pointerEvents = "none";
+    // Sync changes back to original input
+    clonedInput.addEventListener("input", () => {
+      input.value = clonedInput.value;
+      const event = new Event("input", { bubbles: true });
+      input.dispatchEvent(event);
     });
 
-    // Add submit button if form has one
-    const submitButton = form.querySelector(
-      'input[type="submit"], button[type="submit"]'
-    );
-    if (submitButton) {
-      const clonedSubmit = submitButton.cloneNode(true);
-      clonedSubmit.addEventListener("click", (e) => {
-        e.preventDefault();
-        submitButton.click();
-      });
-      container.appendChild(clonedSubmit);
-    }
+    wrapper.appendChild(label);
+    wrapper.appendChild(clonedInput);
+    container.appendChild(wrapper);
+
+    // Hide original input
+    input.style.opacity = "0";
+    input.style.position = "absolute";
+    input.style.pointerEvents = "none";
+  });
+
+  // Handle form submission
+  const submitButton = form.querySelector(
+    'input[type="submit"], button[type="submit"]'
+  );
+  if (submitButton) {
+    const buttonContainer = document.createElement("div");
+    buttonContainer.style.display = "flex";
+    buttonContainer.style.justifyContent = "flex-end";
+    buttonContainer.style.gap = "10px";
+    buttonContainer.style.marginTop = "20px";
 
     // Add close button
     const closeButton = document.createElement("button");
     closeButton.textContent = "Close";
-    closeButton.style.marginLeft = "10px";
-    closeButton.style.padding = "6px 12px";
+    closeButton.style.padding = "8px 16px";
+    closeButton.style.backgroundColor = "#f0f0f0";
+    closeButton.style.border = "none";
+    closeButton.style.borderRadius = "4px";
+    closeButton.addEventListener("click", () => {
+      container.remove();
+      inputs.forEach((input) => {
+        input.style.opacity = "";
+        input.style.position = "";
+        input.style.pointerEvents = "";
+      });
+    });
+
+    // Add submit button if form has one
+    const clonedSubmit = submitButton.cloneNode(true);
+    clonedSubmit.style.padding = "8px 16px";
+    clonedSubmit.style.backgroundColor = "#007bff";
+    clonedSubmit.style.color = "white";
+    clonedSubmit.style.border = "none";
+    clonedSubmit.style.borderRadius = "4px";
+    clonedSubmit.addEventListener("click", (e) => {
+      e.preventDefault();
+      submitButton.click();
+    });
+
+    buttonContainer.appendChild(closeButton);
+    buttonContainer.appendChild(clonedSubmit);
+    container.appendChild(buttonContainer);
+  } else {
+    // Add just close button if no submit button
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "Close";
+    closeButton.style.display = "block";
+    closeButton.style.margin = "20px auto 0";
+    closeButton.style.padding = "8px 16px";
     closeButton.style.backgroundColor = "#f0f0f0";
     closeButton.style.border = "none";
     closeButton.style.borderRadius = "4px";
@@ -348,10 +414,11 @@
       });
     });
     container.appendChild(closeButton);
-
-    document.body.appendChild(container);
-    form.classList.add("ffi-optimized");
   }
+
+  document.body.appendChild(container);
+  form.classList.add("ffi-optimized");
+}
 
   async function applyAIOptimizations() {
     const statusElement = document.createElement("div");
@@ -362,7 +429,7 @@
     statusElement.style.padding = "10px";
     statusElement.style.background = "white";
     statusElement.style.borderRadius = "5px";
-    statusElement.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
+    statusElement.style.boxShadow = "0 2px 5px rgba(0, 0, 0, 0.2)";
 
     try {
       statusElement.textContent = "Analyzing page with AI...";
@@ -384,7 +451,7 @@
       statusElement.textContent = "Optimization complete!";
       setTimeout(() => statusElement.remove(), 2000);
     } catch (error) {
-      statusElement.style.background = "#ffebee";
+      statusElement.style.background = "red";
       statusElement.textContent = `AI Error: ${error.message}. Using fallback heuristics.`;
       setTimeout(() => statusElement.remove(), 5000);
 
@@ -395,41 +462,69 @@
   }
 
   function analyzePageStructure() {
-    const inputs = Array.from(document.querySelectorAll("input, textarea")).map(
-      (input) => ({
+  const inputs = Array.from(document.querySelectorAll("input, textarea, select")).map(
+    (input) => {
+      // Find the closest label
+      let labelText = '';
+      if (input.id) {
+        const label = document.querySelector(`label[for="${input.id}"]`);
+        if (label) labelText = label.textContent.trim();
+      }
+      
+      // Fallback to previous element if it's a label
+      if (!labelText && input.previousElementSibling?.tagName === 'LABEL') {
+        labelText = input.previousElementSibling.textContent.trim();
+      }
+      
+      // Fallback to aria-label or placeholder
+      labelText = labelText || 
+                 input.getAttribute('aria-label') || 
+                 input.getAttribute('placeholder') || 
+                 '';
+
+      return {
         id: input.id,
         name: input.name,
         type: input.type,
+        label: labelText,
         placeholder: input.placeholder,
         position: input.getBoundingClientRect(),
         parent: {
           tag: input.parentElement?.tagName,
           id: input.parentElement?.id,
           class: input.parentElement?.className,
-        },
-      })
-    );
+        }
+      };
+    }
+  );
 
-    const forms = Array.from(document.querySelectorAll("form")).map((form) => ({
+  const forms = Array.from(document.querySelectorAll("form, .form, [role='form']")).map((form) => {
+    const formInputs = Array.from(form.querySelectorAll("input, textarea, select"));
+    
+    return {
       id: form.id,
       class: form.className,
-      inputs: Array.from(form.querySelectorAll("input, textarea")).map(
-        (input) => input.id || input.name
-      ),
-      position: form.getBoundingClientRect(),
-    }));
-
-    return {
-      url: window.location.href,
-      viewport: {
-        width: window.innerWidth,
-        height: window.innerHeight,
-      },
-      inputs,
-      forms,
-      scrollableAreas: findScrollableAreas(),
+      name: form.getAttribute('name') || '',
+      inputs: formInputs.map(input => ({
+        id: input.id,
+        name: input.name,
+        type: input.type
+      })),
+      position: form.getBoundingClientRect()
     };
-  }
+  });
+
+  return {
+    url: window.location.href,
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    },
+    inputs,
+    forms,
+    scrollableAreas: findScrollableAreas(),
+  };
+}
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -438,7 +533,7 @@ async function getAIOptimizations(pageData) {
     console.warn("No API key provided. Using fallback optimizations.");
     return getFallbackOptimizations();
   }
-
+   console.log("page data before prompt hit:", pageData);
   const prompt = `Analyze this web page structure and suggest UX improvements for input fields. Focus on:
 1. Repositioning inputs that require excessive scrolling
 2. Grouping related form fields
@@ -478,7 +573,7 @@ ${JSON.stringify(pageData, null, 2)}`;
       body: JSON.stringify({
         model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
+        temperature: 0.1,
         response_format: { type: "json_object" } // Request JSON response
       })
     });

@@ -161,3 +161,35 @@ kbd {
   font-size: 11px;
   font-family: monospace;
 }
+
+.ffi-container {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.ffi-container label {
+  color: #333;
+  font-size: 14px;
+}
+
+.ffi-container input,
+.ffi-container textarea,
+.ffi-container select {
+  font-size: 16px;
+  border: 1px solid #ddd !important;
+  transition: border-color 0.2s;
+}
+
+.ffi-container input:focus,
+.ffi-container textarea:focus {
+  border-color: #007bff !important;
+  outline: none;
+}
+
+.ffi-container button {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ffi-container button:hover {
+  opacity: 0.9;
+}
