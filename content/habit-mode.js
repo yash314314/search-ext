@@ -1,7 +1,7 @@
 (() => {
   console.log("Habit Mode script loaded/content");
 
-  // Prevent duplicate execution
+
   if (window.__habitModeInitialized__) return;
   window.__habitModeInitialized__ = true;
 
@@ -14,7 +14,7 @@
   let offsetX = 0;
   let offsetY = 0;
 
-  // Initialize habit mode
+
   initHabitMode();
 
   function initHabitMode() {

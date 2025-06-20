@@ -5,6 +5,61 @@
     <link rel="stylesheet" href="popup.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+ 
+        .custom-prompt-container {
+            display: none;
+            margin-top: 15px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .custom-prompt-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .custom-prompt-textarea:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+            outline: none;
+        }
+        
+        .custom-prompt-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .custom-prompt-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .custom-prompt-save {
+            background-color: #332f2f;
+            color: white;
+        }
+        
+        .custom-prompt-cancel {
+            background-color: #332f2f;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -16,14 +71,14 @@
         </div>
         
         <div class="mode-panels">
-            <!-- Habit Mode Settings -->
+  
             <div id="habit-mode-settings" class="mode-panel">
                 <div class="setting">
                     <label class="switch">
                         <input type="checkbox" id="habit-mode-toggle" checked>
                         <span class="slider"></span>
                     </label>
-                    <span>Enable Habit Mode</span>
+                    <span class="test">Enable Habit Mode</span>
                 </div>
                 
                 <div class="setting">
@@ -36,7 +91,7 @@
                 </div>
             </div>
             
-            <!-- Advanced Mode Settings -->
+    
             <div id="advanced-mode-settings" class="mode-panel hidden">
                 <div class="setting">
                     <label class="switch">
@@ -55,31 +110,19 @@
                 <div class="setting">
                     <label for="optimization-level">Optimization Level:</label>
                     <select id="optimization-level">
-                        <option value="basic">Basic</option>
-                        <option value="balanced">Balanced</option>
-                        <option value="aggressive">Aggressive</option>
-                        <option value="custom">Custom</option>
-                    </select>
+    <option value="standard">Standard</option>
+    <option value="custom">Custom</option>
+    </select>
                 </div>
                 
-                <div id="custom-options" class="hidden">
-                    <div class="setting">
-                        <label>
-                            <input type="checkbox" id="opt-reposition" checked>
-                            Reposition Inputs
-                        </label>
-                    </div>
-                    <div class="setting">
-                        <label>
-                            <input type="checkbox" id="opt-group" checked>
-                            Group Related Fields
-                        </label>
-                    </div>
-                    <div class="setting">
-                        <label>
-                            <input type="checkbox" id="opt-summarize">
-                            Summarize Content
-                        </label>
+  
+                <div id="custom-prompt-container" class="custom-prompt-container">
+                    <label for="custom-prompt-textarea">Custom Prompt:</label>
+                    <textarea id="custom-prompt-textarea" class="custom-prompt-textarea" 
+                        placeholder="Enter your custom optimization instructions..."></textarea>
+                    <div class="custom-prompt-actions">
+                        <button id="custom-prompt-cancel" class="custom-prompt-btn custom-prompt-cancel">Cancel</button>
+                        <button id="custom-prompt-save" class="custom-prompt-btn custom-prompt-save">Go</button>
                     </div>
                 </div>
             </div>

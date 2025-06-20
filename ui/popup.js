@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const getElement = (id) => document.getElementById(id);
 
-  // DOM elements
+
   const habitModeBtn = getElement('habit-mode-btn');
   const advancedModeBtn = getElement('advanced-mode-btn');
   const habitModePanel = getElement('habit-mode-settings');
@@ -11,10 +11,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   const apiKeyInput = getElement('api-key');
   const saveApiKeyBtn = getElement('save-api-key');
   const optimizationLevel = getElement('optimization-level');
-  const customOptions = getElement('custom-options');
   const habitPosition = getElement('habit-position');
 
-  // Load initial state
+  const customPromptContainer = getElement('custom-prompt-container');
+  const customPromptTextarea = getElement('custom-prompt-textarea');
+  const customPromptSave = getElement('custom-prompt-save');
+  const customPromptCancel = getElement('custom-prompt-cancel');
+
+
+  let isCustomModeActive = false;
+
+
   async function loadInitialState() {
     try {
       const result = await chrome.storage.sync.get([
@@ -23,31 +30,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         'llmApiKey',
         'habitPosition',
         'optimizationLevel',
-        'customOptions'
+        'customPrompt'
       ]);
 
-      // Set initial toggle states
+
       habitModeToggle.checked = result.habitModeActive !== false;
       advancedModeToggle.checked = result.advancedModeActive || false;
       apiKeyInput.value = result.llmApiKey || '';
 
-      // Set additional settings
+  
       if (habitPosition && result.habitPosition) {
         habitPosition.value = result.habitPosition;
       }
 
       if (optimizationLevel && result.optimizationLevel) {
         optimizationLevel.value = result.optimizationLevel;
-        toggleCustomOptions(result.optimizationLevel === 'custom');
+        isCustomModeActive = result.optimizationLevel === 'custom';
+        toggleCustomPrompt(isCustomModeActive);
       }
 
-      if (customOptions && result.customOptions) {
-        getElement('opt-reposition').checked = result.customOptions.reposition;
-        getElement('opt-group').checked = result.customOptions.group;
-        getElement('opt-summarize').checked = result.customOptions.summarize;
+      if (result.customPrompt) {
+        customPromptTextarea.value = result.customPrompt;
       }
 
-      // Set initial UI mode
+     
       if (advancedModeToggle.checked) {
         switchToAdvancedMode();
       } else {
@@ -59,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Mode switching functions
+
   function switchToHabitMode() {
     habitModeBtn?.classList.add('active');
     advancedModeBtn?.classList.remove('active');
@@ -74,64 +80,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     habitModePanel?.classList.add('hidden');
   }
 
-  // Toggle handlers with improved state management
- async function handleHabitModeToggle() {
-  const enabled = habitModeToggle.checked;
 
-  try {
-    if (enabled && advancedModeToggle.checked) {
-      advancedModeToggle.checked = false;
-    }
-
-    const response = await chrome.runtime.sendMessage({
-      action: "toggleHabitMode",
-      enabled
-    });
-
-    if (response?.success) {
-      if (enabled) switchToHabitMode();
-    } else {
-      habitModeToggle.checked = !enabled;
-      showStatus('Failed to toggle habit mode', 'error');
-    }
-  } catch (error) {
-    console.error('Habit mode toggle error:', error);
-    habitModeToggle.checked = !enabled;
-    showStatus('Error toggling habit mode', 'error');
+  function toggleCustomPrompt(show) {
+    customPromptContainer.style.display = show ? 'block' : 'none';
   }
-}
 
+
+  async function handleHabitModeToggle() {
+    const enabled = habitModeToggle.checked;
+
+    try {
+      if (enabled && advancedModeToggle.checked) {
+        advancedModeToggle.checked = false;
+      }
+
+      const response = await chrome.runtime.sendMessage({
+        action: "toggleHabitMode",
+        enabled
+      });
+
+      if (response?.success) {
+        if (enabled) switchToHabitMode();
+      } else {
+        habitModeToggle.checked = !enabled;
+        showStatus('Failed to toggle habit mode', 'error');
+      }
+    } catch (error) {
+      console.error('Habit mode toggle error:', error);
+      habitModeToggle.checked = !enabled;
+      showStatus('Error toggling habit mode', 'error');
+    }
+  }
 
   async function handleAdvancedModeToggle() {
-  const enabled = advancedModeToggle.checked;
+    const enabled = advancedModeToggle.checked;
 
-  try {
-    if (enabled && habitModeToggle.checked) {
-      habitModeToggle.checked = false;
-    }
+    try {
+      if (enabled && habitModeToggle.checked) {
+        habitModeToggle.checked = false;
+      }
 
-    const response = await chrome.runtime.sendMessage({
-      action: "toggleAdvancedMode",
-      enabled
-    });
+      const response = await chrome.runtime.sendMessage({
+        action: "toggleAdvancedMode",
+        enabled
+      });
 
-    if (response?.success) {
-      if (enabled) switchToAdvancedMode();
-    } else {
+      if (response?.success) {
+        if (enabled) switchToAdvancedMode();
+      } else {
+        advancedModeToggle.checked = !enabled;
+        showStatus('Failed to toggle advanced mode', 'error');
+      }
+    } catch (error) {
+      console.error('Advanced mode toggle error:', error);
       advancedModeToggle.checked = !enabled;
-      showStatus('Failed to toggle advanced mode', 'error');
+      showStatus('Error toggling advanced mode', 'error');
     }
-  } catch (error) {
-    console.error('Advanced mode toggle error:', error);
-    advancedModeToggle.checked = !enabled;
-    showStatus('Error toggling advanced mode', 'error');
   }
-}
 
-  // Helper functions
-  function toggleCustomOptions(show) {
-    customOptions?.classList.toggle('hidden', !show);
-  }
 
   function showStatus(message, type) {
     const status = document.createElement('div');
@@ -141,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => status.remove(), 3000);
   }
 
-  // Event listeners
+ 
   habitModeBtn?.addEventListener('click', switchToHabitMode);
   advancedModeBtn?.addEventListener('click', switchToAdvancedMode);
   habitModeToggle?.addEventListener('change', handleHabitModeToggle);
@@ -169,10 +175,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   optimizationLevel?.addEventListener('change', () => {
     const level = optimizationLevel.value;
-    chrome.storage.sync.set({ optimizationLevel: level });
-    toggleCustomOptions(level === 'custom');
+    isCustomModeActive = level === 'custom';
+    chrome.storage.sync.set({ 
+        optimizationLevel: level,
+ 
+        customPrompt: isCustomModeActive ? customPromptTextarea.value : null
+    });
+    toggleCustomPrompt(isCustomModeActive);
   });
 
-  // Initialize
+
+  customPromptSave?.addEventListener('click', async () => {
+    const prompt = customPromptTextarea.value.trim();
+    if (prompt) {
+      try {
+        console.log('Saving custom prompt:', prompt);
+        await chrome.storage.sync.set({ customPrompt: prompt });
+        showStatus('Custom prompt saved', 'success');
+        
+      } catch (error) {
+        console.error('Error saving custom prompt:', error);
+        showStatus('Error saving custom prompt', 'error');
+      }
+    } else {
+      showStatus('Please enter a custom prompt', 'error');
+    }
+  });
+
+  customPromptCancel?.addEventListener('click', () => {
+    
+    if (!isCustomModeActive) {
+      optimizationLevel.value = 'balanced';
+      chrome.storage.sync.set({ optimizationLevel: 'balanced' });
+    }
+  });
+
+ 
   await loadInitialState();
 });
